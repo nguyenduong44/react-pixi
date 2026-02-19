@@ -1,73 +1,87 @@
-# React + TypeScript + Vite
+# 🌲 Pixel Forest — PixiJS Game Menu
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A 2D pixel-art game menu built with **PixiJS v7** + **React 19** + **TypeScript** + **Vite**.
 
-Currently, two official plugins are available:
+## 🎮 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Parallax Background** — 5-layer depth: sky → mountains → far trees → mid trees → near trees → ground
+- **Pixel Horse Herd** — 6 horses running across screen using `PIXI.AnimatedSprite` (8 frames, procedurally generated)
+- **Main Menu** — Pixel-art styled panel with *START* and *EXIT* buttons
+- **Difficulty Menu** — Easy / Medium / Hard / Asia + Back button
+- **Smooth Transitions** — Fade in/out between menus (eased tween)
+- **8-bit Sound Effects** — Web Audio API procedural sounds (hover, click, menu open/back)
+- **Pixel-Perfect Rendering** — `NEAREST` scale mode, no antialiasing
 
-## React Compiler
+## 🏗️ Architecture
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── App.tsx                        ← React canvas mount wrapper
+├── main.tsx                       ← Entry point
+├── index.css                      ← Global pixel-perfect canvas style
+└── game/
+    ├── PixiApp.ts                 ← Main PIXI.Application + game loop
+    ├── systems/
+    │   ├── BackgroundSystem.ts    ← Parallax TilingSprite layers
+    │   ├── HorseSystem.ts         ← AnimatedSprite horse herd
+    │   └── UISystem.ts            ← Finite-state menu manager
+    └── utils/
+        ├── PixelArtFactory.ts     ← Procedural texture generation
+        └── SoundManager.ts        ← Web Audio API 8-bit sounds
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Container Hierarchy
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+PIXI.stage
+  ├── backgroundContainer   ← TilingSprites (parallax layers)
+  ├── horseContainer        ← AnimatedSprites (horse herd)
+  └── uiContainer           ← Menu panels & buttons
+```
+
+## 🚀 Getting Started
+
+```bash
+# Install dependencies (includes pixi.js v7)
+npm install
+
+# Run dev server
+npm run dev
+```
+
+Open `http://localhost:5173`
+
+## 🎨 Assets
+
+All pixel art is **100% procedurally generated** — no external sprite sheets or image files are needed. Every texture is drawn using `PIXI.Graphics` and rendered to `PIXI.RenderTexture` at runtime.
+
+This means the project works **offline, instantly**, with no asset loading errors.
+
+### Palette
+
+| Element | Color |
+|---------|-------|
+| Sky | Deep navy `#05071a` → `#1a0a35` |
+| Moon | Warm ivory `#fff4b8` |
+| Mountains | Dark slate `#0e1a2e` |
+| Trees (far) | Deep forest `#0d2314` |
+| Ground | Dark moss `#1a3d08` |
+| Horse body | Chestnut brown `#7a3b10` |
+
+## 🔧 Technical Notes
+
+- **Pixel-perfect**: `PIXI.settings.SCALE_MODE = NEAREST` + `imageRendering: pixelated` on canvas
+- **No StrictMode**: Removed to prevent double WebGL context creation in development
+- **Menu FSM**: Simple `'main' | 'difficulty'` state, transitions via alpha tweening
+- **Sound**: Web Audio API oscillators — no `.mp3` files, pure 8-bit tones
+- **Responsive**: Listens to `window.resize`, updates renderer + systems
+
+## 🕹️ Menu Controls
+
+| Action | Result |
+|--------|--------|
+| Hover button | Scale + glow effect + hover sound |
+| Click **START** | Fade to difficulty selection |
+| Click **BACK** | Fade back to main menu |
+| Click **EASY/MEDIUM/HARD/ASIA** | Console log + notification |
+| Click **EXIT** | UI fades out |
