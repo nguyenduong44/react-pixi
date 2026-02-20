@@ -1,10 +1,3 @@
-/**
- * LoadingScreen.ts
- *
- * Phase 1 — Progress bar (3–4 giây)
- * Phase 2 — Màn đen, chữ "2026" nhấp nháy giữa màn hình (3–4 giây)
- * → gọi onComplete() sau khi xong phase 2
- */
 import * as PIXI from "pixi.js";
 
 const PIXEL_FONT = '"Press Start 2P", "Courier New", monospace';
@@ -20,7 +13,6 @@ const P = {
   barShine: 0x88ff88,
   barDark: 0x116611,
   percent: 0xffffff,
-  percentShadow: 0x003300,
   overlayBg: 0x000000,
   tipText: 0xaaaaaa,
 };
@@ -40,19 +32,19 @@ const TIPS = [
 
 export class LoadingScreen {
   private container: PIXI.Container;
-  private phase1: PIXI.Container; // progress bar layer
-  private phase2: PIXI.Container; // "2026" blink layer
+  private phase1: PIXI.Container;
+  private phase2: PIXI.Container;
 
-  private barFillGfx: PIXI.Graphics;
-  private percentText: PIXI.Text;
+  // FIX TS2564: thêm definite assignment assertion '!'
+  private barFillGfx!: PIXI.Graphics;
+  private percentText!: PIXI.Text;
+  private blinkContainer!: PIXI.Container;
 
   private progress = 0;
   private targetProg = 0;
   private done = false;
   private inPhase2 = false;
-
   private blinkTimer = 0;
-  private blinkText!: PIXI.Text;
 
   private W: number;
   private H: number;
@@ -82,33 +74,28 @@ export class LoadingScreen {
     this.startProgress();
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // PHASE 1 — Progress bar
-  // ══════════════════════════════════════════════════════════════
+  // ── PHASE 1: Progress bar ─────────────────────────────────────────────────
   private buildPhase1() {
     const c = this.phase1;
     const { W, H } = this;
 
-    // Full-screen dark overlay
     const overlay = new PIXI.Graphics();
     overlay.beginFill(P.overlayBg, 0.85);
     overlay.drawRect(0, 0, W, H);
     overlay.endFill();
     c.addChild(overlay);
 
-    // Title "LOADING..."
     const titleY = H * 0.35;
     const titleCx = W / 2;
 
-    (
-      [
-        [P.title3dB, 5, 5],
-        [P.title3dB, 4, 4],
-        [P.title3dA, 3, 3],
-        [P.title3dA, 2, 2],
-      ] as [number, number, number][]
-    ).forEach(([color, dx, dy]) => {
-      const t = new PIXI.Text("Đang tải thế giới...", {
+    const depths: [number, number, number][] = [
+      [P.title3dB, 5, 5],
+      [P.title3dB, 4, 4],
+      [P.title3dA, 3, 3],
+      [P.title3dA, 2, 2],
+    ];
+    depths.forEach(([color, dx, dy]) => {
+      const t = new PIXI.Text("đang tải thế giới...", {
         fontFamily: PIXEL_FONT,
         fontSize: 36,
         fill: color,
@@ -120,21 +107,30 @@ export class LoadingScreen {
       c.addChild(t);
     });
 
-    ["stroke", "face"].forEach((layer) => {
-      const t = new PIXI.Text("Đang tải thế giới...", {
-        fontFamily: PIXEL_FONT,
-        fontSize: 36,
-        fill: P.titleFace,
-        ...(layer === "stroke" ? { stroke: 0x000000, strokeThickness: 6 } : {}),
-        align: "center",
-      } as PIXI.TextStyle);
-      t.anchor.set(0.5);
-      t.x = titleCx;
-      t.y = titleY;
-      c.addChild(t);
-    });
+    const outline = new PIXI.Text("đang tải thế giới...", {
+      fontFamily: PIXEL_FONT,
+      fontSize: 36,
+      fill: P.titleFace,
+      stroke: 0x000000,
+      strokeThickness: 6,
+      align: "center",
+    } as PIXI.TextStyle);
+    outline.anchor.set(0.5);
+    outline.x = titleCx;
+    outline.y = titleY;
+    c.addChild(outline);
 
-    // Progress bar
+    const face = new PIXI.Text("đang tải thế giới...", {
+      fontFamily: PIXEL_FONT,
+      fontSize: 36,
+      fill: P.titleFace,
+      align: "center",
+    } as PIXI.TextStyle);
+    face.anchor.set(0.5);
+    face.x = titleCx;
+    face.y = titleY;
+    c.addChild(face);
+
     const barX = W / 2 - BAR_W / 2;
     const barY = H * 0.55;
 
@@ -148,7 +144,6 @@ export class LoadingScreen {
     barBorder.beginFill(P.barBg);
     barBorder.drawRect(barX, barY, BAR_W, BAR_H);
     barBorder.endFill();
-
     [
       [barX - 3, barY - 3],
       [barX + BAR_W - 1, barY - 3],
@@ -166,7 +161,6 @@ export class LoadingScreen {
     this.barFillGfx.y = barY;
     c.addChild(this.barFillGfx);
 
-    // Percent text
     this.percentText = new PIXI.Text("0%", {
       fontFamily: PIXEL_FONT,
       fontSize: 14,
@@ -178,11 +172,10 @@ export class LoadingScreen {
     this.percentText.y = barY + BAR_H + 12;
     c.addChild(this.percentText);
 
-    // Tip
     const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
     const tipT = new PIXI.Text("TIP: " + tip, {
       fontFamily: PIXEL_FONT,
-      fontSize: 12,
+      fontSize: 9,
       fill: P.tipText,
       align: "center",
     } as PIXI.TextStyle);
@@ -191,38 +184,36 @@ export class LoadingScreen {
     tipT.y = barY + BAR_H + 44;
     c.addChild(tipT);
 
-    // Fade in
     c.alpha = 0;
     this.fadeTo(c, 1, 20);
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // PHASE 2 — Màn đen + "2026" nhấp nháy
-  // ══════════════════════════════════════════════════════════════
+  // ── PHASE 2: Màn đen + "2026" nhấp nháy ──────────────────────────────────
   private buildPhase2() {
     const c = this.phase2;
     const { W, H } = this;
+    const cx = W / 2;
+    const cy = H / 2;
+    const SIZE = 100;
 
-    // Màn đen hoàn toàn
+    // Nền đen luôn hiển thị
     const bg = new PIXI.Graphics();
     bg.beginFill(0x000000, 1);
     bg.drawRect(0, 0, W, H);
     bg.endFill();
     c.addChild(bg);
 
-    // "2026" — 3D extrude
-    const cx = W / 2;
-    const cy = H / 2;
-    const SIZE = 150;
+    // Bọc TOÀN BỘ chữ "2026" (kể cả 3D layers) vào 1 container
+    // → toggle visible để ẩn/hiện cả khối cùng lúc
+    this.blinkContainer = new PIXI.Container();
 
-    (
-      [
-        [P.title3dB, 8, 8],
-        [P.title3dB, 6, 6],
-        [P.title3dA, 4, 4],
-        [P.title3dA, 2, 2],
-      ] as [number, number, number][]
-    ).forEach(([color, dx, dy]) => {
+    const depths: [number, number, number][] = [
+      [P.title3dB, 8, 8],
+      [P.title3dB, 6, 6],
+      [P.title3dA, 4, 4],
+      [P.title3dA, 2, 2],
+    ];
+    depths.forEach(([color, dx, dy]) => {
       const t = new PIXI.Text("2026", {
         fontFamily: PIXEL_FONT,
         fontSize: SIZE,
@@ -233,10 +224,9 @@ export class LoadingScreen {
       t.anchor.set(0.5);
       t.x = cx + dx;
       t.y = cy + dy;
-      c.addChild(t);
+      this.blinkContainer.addChild(t);
     });
 
-    // Outline
     const outline = new PIXI.Text("2026", {
       fontFamily: PIXEL_FONT,
       fontSize: SIZE,
@@ -249,25 +239,24 @@ export class LoadingScreen {
     outline.anchor.set(0.5);
     outline.x = cx;
     outline.y = cy;
-    c.addChild(outline);
+    this.blinkContainer.addChild(outline);
 
-    // Face — đây là text nhấp nháy
-    this.blinkText = new PIXI.Text("2026", {
+    const face = new PIXI.Text("2026", {
       fontFamily: PIXEL_FONT,
       fontSize: SIZE,
       fontWeight: "700",
       fill: P.titleFace,
       align: "center",
     } as PIXI.TextStyle);
-    this.blinkText.anchor.set(0.5);
-    this.blinkText.x = cx;
-    this.blinkText.y = cy;
-    c.addChild(this.blinkText);
+    face.anchor.set(0.5);
+    face.x = cx;
+    face.y = cy;
+    this.blinkContainer.addChild(face);
+
+    c.addChild(this.blinkContainer);
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // PROGRESS SCHEDULING
-  // ══════════════════════════════════════════════════════════════
+  // ── Progress scheduling ───────────────────────────────────────────────────
   private startProgress() {
     const total = 3000 + Math.random() * 1000;
     const start = performance.now();
@@ -277,20 +266,15 @@ export class LoadingScreen {
       const elapsed = performance.now() - start;
       const raw = Math.min(1, elapsed / total);
 
-      let eased: number;
-      if (raw < 0.85) {
-        eased = this.easeOut(raw / 0.85) * 0.92;
-      } else {
-        eased = 0.92 + ((raw - 0.85) / 0.15) * 0.08;
-      }
-
-      this.targetProg = eased;
+      this.targetProg =
+        raw < 0.85
+          ? this.easeOut(raw / 0.85) * 0.92
+          : 0.92 + ((raw - 0.85) / 0.15) * 0.08;
 
       if (raw < 1) {
         requestAnimationFrame(step);
       } else {
         this.targetProg = 1;
-        // Sau 400ms snap 100% → chuyển sang phase 2
         setTimeout(() => this.enterPhase2(), 400);
       }
     };
@@ -303,16 +287,13 @@ export class LoadingScreen {
     this.inPhase2 = true;
     this.blinkTimer = 0;
 
-    // Fade out phase 1, fade in phase 2
     this.fadeTo(this.phase1, 0, 20, () => {
       this.phase1.visible = false;
     });
-
     this.phase2.visible = true;
     this.phase2.alpha = 0;
     this.fadeTo(this.phase2, 1, 25);
 
-    // 3–4 giây sau → fade out phase 2 → complete
     const holdMs = 3000 + Math.random() * 1000;
     setTimeout(() => {
       if (this.done) return;
@@ -322,29 +303,27 @@ export class LoadingScreen {
     }, holdMs);
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // UPDATE — gọi mỗi ticker tick từ UISystem
-  // ══════════════════════════════════════════════════════════════
+  // ── Update (gọi từ UISystem mỗi ticker tick) ──────────────────────────────
   update() {
     if (this.done) return;
 
     if (!this.inPhase2) {
-      // Update progress bar
       this.progress += (this.targetProg - this.progress) * 0.06;
       this.drawBar(this.progress);
       this.percentText.text = Math.round(this.progress * 100) + "%";
     } else {
-      // Nhấp nháy "2026": đổi alpha mỗi 20 frame (~0.33s)
-      this.blinkTimer++;
-      if (this.blinkTimer % 20 === 0) {
-        this.blinkText.alpha = this.blinkText.alpha > 0.5 ? 0 : 1;
-      }
+      // this.blinkTimer++;
+      // // Toggle visible toàn bộ khối "2026" mỗi 25 frame (~0.4s)
+      // if (this.blinkTimer % 50 === 0) {
+      //   this.blinkContainer.visible = !this.blinkContainer.visible;
+      // }
+
+      this.blinkTimer += 0.08; // tăng số này = nhanh hơn
+      this.blinkContainer.alpha = 0.6 + Math.sin(this.blinkTimer) * 0.4;
     }
   }
 
-  // ══════════════════════════════════════════════════════════════
-  // HELPERS
-  // ══════════════════════════════════════════════════════════════
+  // ── Helpers ───────────────────────────────────────────────────────────────
   private drawBar(progress: number) {
     const g = this.barFillGfx;
     const fillW = Math.floor(BAR_W * progress);

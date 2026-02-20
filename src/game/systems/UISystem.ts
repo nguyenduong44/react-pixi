@@ -1,17 +1,3 @@
-/**
- * UISystem — Classic Arcade Text Menu
- *
- * FIX: Items left-aligned at a fixed column (not center-anchored).
- *      Cursor ► sits in its own fixed column to the LEFT of all items.
- *      Gap between cursor and text is always constant.
- *
- *  col layout:
- *    [CURSOR_COL]  [ITEMS_LEFT_COL] ← text starts here
- *        ►           START
- *                    EXIT
- *
- * States: 'main' | 'difficulty' | 'loading'
- */
 import * as PIXI from "pixi.js";
 import { soundManager } from "../utils/SoundManager";
 import { LoadingScreen } from "./LoadingScreen";
@@ -19,12 +5,12 @@ import { LoadingScreen } from "./LoadingScreen";
 const PIXEL_FONT = '"Ysabeau Infant", "Courier New", monospace';
 
 const P = {
-  titleFill: 0xf5a623,
-  title3dA: 0x8b3a00,
-  title3dB: 0x5a2200,
-  itemNormal: 0xffffff,
-  itemHover: 0xf5e642,
-  itemShadow: 0x112200,
+  titleFill:   0xf5a623,
+  title3dA:    0x8b3a00,
+  title3dB:    0x5a2200,
+  itemNormal:  0xffffff,
+  itemHover:   0xf5e642,
+  itemShadow:  0x112200,
   cursorColor: 0xf5e642,
   cursorShadow: 0x5a4a00,
 };
@@ -36,19 +22,15 @@ interface MenuItem {
   onClick: () => void;
 }
 
-const TITLE_SIZE = 250;
-const ITEM_SIZE = 60;
-const ITEM_SPACING = 70;
-const ITEM_WEIGHT = "700";
-
-// ── Layout constants ──────────────────────────────────────────────────────
-// All items are LEFT-aligned starting at ITEMS_LEFT (relative to center).
-// Cursor sits CURSOR_GAP pixels to the left of ITEMS_LEFT.
-const ITEMS_HALF_OFFSET = 90; // items start at  cx - ITEMS_HALF_OFFSET
-const CURSOR_GAP = 36; // cursor sits that many px left of item text
+const TITLE_SIZE    = 250;
+const ITEM_SIZE     = 60;
+const ITEM_SPACING  = 70;
+const ITEM_WEIGHT   = "700";
+const ITEMS_HALF_OFFSET = 90;
+const CURSOR_GAP    = 36;
 
 export class UISystem {
-  private app: PIXI.Application;
+  // FIX TS6133: removed unused 'app' field entirely
   private container: PIXI.Container;
   private menus = new Map<MenuState, PIXI.Container>();
   private state: MenuState = "main";
@@ -75,13 +57,8 @@ export class UISystem {
     onComplete?: () => void;
   } | null = null;
 
-  constructor(
-    app: PIXI.Application,
-    container: PIXI.Container,
-    W: number,
-    H: number,
-  ) {
-    this.app = app;
+  // FIX TS6133: removed 'app' parameter — UISystem doesn't need it
+  constructor(container: PIXI.Container, W: number, H: number) {
     this.container = container;
     this.W = W;
     this.H = H;
@@ -92,9 +69,7 @@ export class UISystem {
     this.bindKeyboard();
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // MAIN MENU
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── MAIN MENU ─────────────────────────────────────────────────────────────
   private buildMain() {
     const c = new PIXI.Container();
     c.alpha = 0;
@@ -118,10 +93,8 @@ export class UISystem {
     ];
     this.menuItems.set("main", items);
 
-    // Title
     c.addChild(this.make3DTitle("2026", this.W / 2, this.H * 0.22));
 
-    // Items
     const startY = this.H * 0.52;
     this.itemBaseY.set("main", startY);
     const { root, cursor } = this.makeItemList(items, startY, "main");
@@ -132,57 +105,23 @@ export class UISystem {
     this.menus.set("main", c);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // DIFFICULTY MENU
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── DIFFICULTY MENU ───────────────────────────────────────────────────────
   private buildDifficulty() {
     const c = new PIXI.Container();
     c.alpha = 0;
     c.visible = false;
 
     const items: MenuItem[] = [
-      {
-        label: "dễ",
-        onClick: () => {
-          soundManager.playClick();
-          this.startLoading("EASY");
-        },
-      },
-      {
-        label: "bình thường",
-        onClick: () => {
-          soundManager.playClick();
-          this.startLoading("MEDIUM");
-        },
-      },
-      {
-        label: "khó",
-        onClick: () => {
-          soundManager.playClick();
-          this.startLoading("HARD");
-        },
-      },
-      {
-        label: "châu á",
-        onClick: () => {
-          soundManager.playClick();
-          this.startLoading("ASIA");
-        },
-      },
-      {
-        label: "< quay lại",
-        onClick: () => {
-          soundManager.playMenuBack();
-          this.transitionTo("main");
-        },
-      },
+      { label: "dễ",          onClick: () => { soundManager.playClick(); this.startLoading("EASY"); } },
+      { label: "bình thường", onClick: () => { soundManager.playClick(); this.startLoading("MEDIUM"); } },
+      { label: "khó",         onClick: () => { soundManager.playClick(); this.startLoading("HARD"); } },
+      { label: "châu á",      onClick: () => { soundManager.playClick(); this.startLoading("ASIA"); } },
+      { label: "< quay lại",  onClick: () => { soundManager.playMenuBack(); this.transitionTo("main"); } },
     ];
     this.menuItems.set("difficulty", items);
 
-    // Title
     c.addChild(this.make3DTitle("2026", this.W / 2, this.H * 0.18));
 
-    // Items
     const startY = this.H * 0.4;
     this.itemBaseY.set("difficulty", startY);
     const { root, cursor } = this.makeItemList(items, startY, "difficulty");
@@ -193,92 +132,60 @@ export class UISystem {
     this.menus.set("difficulty", c);
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // LOADING SCREEN TRIGGER
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── LOADING ───────────────────────────────────────────────────────────────
   private startLoading(level: string) {
-    // Hide all menus first
-    this.menus.forEach((c) => {
-      c.visible = false;
-    });
-
-    console.log(`[Game] Starting: ${level}`);
+    this.menus.forEach((c) => { c.visible = false; });
 
     this.loadingScreen = new LoadingScreen(
       this.container,
       this.W,
       this.H,
       () => {
-        // Loading complete → back to main (in a real game: launch game scene)
         this.loadingScreen = null;
         this.showMenu("main", true);
-        console.log(`[Game] ${level} loaded — launching game!`);
+        console.log(`[Game] ${level} loaded`);
       },
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 3-D EXTRUDED TITLE
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── 3D TITLE ──────────────────────────────────────────────────────────────
   private make3DTitle(text: string, cx: number, cy: number): PIXI.Container {
     const c = new PIXI.Container();
 
-    const depthLayers: [number, number, number][] = [
-      [P.title3dB, 6, 6],
-      [P.title3dB, 5, 5],
-      [P.title3dA, 4, 4],
-      [P.title3dA, 3, 3],
-      [P.title3dA, 2, 2],
+    const depths: [number, number, number][] = [
+      [P.title3dB, 6, 6], [P.title3dB, 5, 5],
+      [P.title3dA, 4, 4], [P.title3dA, 3, 3], [P.title3dA, 2, 2],
     ];
 
-    depthLayers.forEach(([color, dx, dy]) => {
+    depths.forEach(([color, dx, dy]) => {
       const t = new PIXI.Text(text, {
-        fontFamily: PIXEL_FONT,
-        fontSize: TITLE_SIZE,
-        fontWeight: ITEM_WEIGHT,
-        fill: color,
-        align: "center",
+        fontFamily: PIXEL_FONT, fontSize: TITLE_SIZE,
+        fontWeight: ITEM_WEIGHT, fill: color, align: "center",
       } as PIXI.TextStyle);
       t.anchor.set(0.5);
-      t.x = cx + dx;
-      t.y = cy + dy;
+      t.x = cx + dx; t.y = cy + dy;
       c.addChild(t);
     });
 
-    // Black outline
     const outline = new PIXI.Text(text, {
-      fontFamily: PIXEL_FONT,
-      fontSize: TITLE_SIZE,
-      fill: P.titleFill,
-      stroke: 0x000000,
-      strokeThickness: 6,
-      align: "center",
-      fontWeight: ITEM_WEIGHT,
+      fontFamily: PIXEL_FONT, fontSize: TITLE_SIZE,
+      fill: P.titleFill, stroke: 0x000000, strokeThickness: 6,
+      align: "center", fontWeight: ITEM_WEIGHT,
     } as PIXI.TextStyle);
-    outline.anchor.set(0.5);
-    outline.x = cx;
-    outline.y = cy;
+    outline.anchor.set(0.5); outline.x = cx; outline.y = cy;
     c.addChild(outline);
 
-    // Face
     const face = new PIXI.Text(text, {
-      fontFamily: PIXEL_FONT,
-      fontSize: TITLE_SIZE,
-      fill: P.titleFill,
-      align: "center",
-      fontWeight: ITEM_WEIGHT,
+      fontFamily: PIXEL_FONT, fontSize: TITLE_SIZE,
+      fill: P.titleFill, align: "center", fontWeight: ITEM_WEIGHT,
     } as PIXI.TextStyle);
-    face.anchor.set(0.5);
-    face.x = cx;
-    face.y = cy;
+    face.anchor.set(0.5); face.x = cx; face.y = cy;
     c.addChild(face);
 
     return c;
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ITEM LIST — LEFT-ALIGNED with separate cursor column
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── ITEM LIST ─────────────────────────────────────────────────────────────
   private makeItemList(
     items: MenuItem[],
     startY: number,
@@ -287,47 +194,31 @@ export class UISystem {
     const root = new PIXI.Container();
     const texts: PIXI.Text[] = [];
 
-    // Fixed columns
-    const itemsLeft = this.W / 2 - ITEMS_HALF_OFFSET; // text left edge
-    const cursorX = itemsLeft - CURSOR_GAP; // cursor right edge
+    const itemsLeft = this.W / 2 - ITEMS_HALF_OFFSET;
+    const cursorX   = itemsLeft - CURSOR_GAP;
 
     items.forEach((item, i) => {
       const y = startY + i * ITEM_SPACING;
 
-      // Shadow (offset 2px right-down)
       const shadow = new PIXI.Text(item.label, {
-        fontFamily: PIXEL_FONT,
-        fontSize: ITEM_SIZE,
-        fontWeight: ITEM_WEIGHT,
-        fill: P.itemShadow,
+        fontFamily: PIXEL_FONT, fontSize: ITEM_SIZE,
+        fontWeight: ITEM_WEIGHT, fill: P.itemShadow,
       } as PIXI.TextStyle);
-      shadow.anchor.set(0, 0.5); // LEFT-align
-      shadow.x = itemsLeft + 2;
-      shadow.y = y + 2;
+      shadow.anchor.set(0, 0.5);
+      shadow.x = itemsLeft + 2; shadow.y = y + 2;
       root.addChild(shadow);
 
-      // Main text
       const t = new PIXI.Text(item.label, {
-        fontFamily: PIXEL_FONT,
-        fontSize: ITEM_SIZE,
-        fontWeight: ITEM_WEIGHT,
-        fill: P.itemNormal,
+        fontFamily: PIXEL_FONT, fontSize: ITEM_SIZE,
+        fontWeight: ITEM_WEIGHT, fill: P.itemNormal,
       } as PIXI.TextStyle);
-      t.anchor.set(0, 0.5); // LEFT-align
-      t.x = itemsLeft;
-      t.y = y;
+      t.anchor.set(0, 0.5);
+      t.x = itemsLeft; t.y = y;
       t.interactive = true;
       t.cursor = "pointer";
 
-      t.on("pointerover", () => {
-        if (this.state !== state) return;
-        this.moveCursor(i, state);
-      });
-      t.on("pointerup", () => {
-        if (this.state !== state) return;
-        soundManager.playClick();
-        items[i].onClick();
-      });
+      t.on("pointerover", () => { if (this.state === state) this.moveCursor(i, state); });
+      t.on("pointerup",   () => { if (this.state === state) { soundManager.playClick(); items[i].onClick(); } });
 
       root.addChild(t);
       texts.push(t);
@@ -335,33 +226,26 @@ export class UISystem {
 
     this.itemTexts.set(state, texts);
 
-    // Cursor ► — RIGHT-aligned flush against cursorX
     const cursor = new PIXI.Text("►", {
-      fontFamily: PIXEL_FONT,
-      fontSize: ITEM_SIZE,
-      fill: P.cursorColor,
-      dropShadow: true,
-      dropShadowColor: P.cursorShadow,
-      dropShadowDistance: 2,
+      fontFamily: PIXEL_FONT, fontSize: ITEM_SIZE,
+      fill: P.cursorColor, dropShadow: true,
+      dropShadowColor: P.cursorShadow, dropShadowDistance: 2,
     } as PIXI.TextStyle);
-    cursor.anchor.set(1, 0.5); // RIGHT-align so it doesn't shift text
-    cursor.x = cursorX;
-    cursor.y = startY; // starts at first item
-
+    cursor.anchor.set(1, 0.5);
+    cursor.x = cursorX; cursor.y = startY;
     root.addChild(cursor);
+
     return { root, cursor };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CURSOR MOVEMENT
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── CURSOR ────────────────────────────────────────────────────────────────
   private moveCursor(index: number, state: MenuState) {
-    const items = this.menuItems.get(state)!;
-    const texts = this.itemTexts.get(state)!;
+    const items  = this.menuItems.get(state)!;
+    const texts  = this.itemTexts.get(state)!;
     const cursor = this.cursorSprites.get(state)!;
 
     this.cursorIndex = Math.max(0, Math.min(items.length - 1, index));
-    cursor.y = texts[this.cursorIndex].y;
+    cursor.y   = texts[this.cursorIndex].y;
     cursor.alpha = 1;
 
     texts.forEach((t, i) => {
@@ -375,49 +259,38 @@ export class UISystem {
     this.menuItems.get(this.state)?.[this.cursorIndex]?.onClick();
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // KEYBOARD
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── KEYBOARD ─────────────────────────────────────────────────────────────
   private bindKeyboard() {
     window.addEventListener("keydown", (e) => {
-      if (this.loadingScreen) return; // disable input during loading
+      if (this.loadingScreen) return;
       const items = this.menuItems.get(this.state);
       if (!items) return;
 
-      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
+      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S")
         this.moveCursor(this.cursorIndex + 1, this.state);
-      } else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+      else if (e.key === "ArrowUp" || e.key === "w" || e.key === "W")
         this.moveCursor(this.cursorIndex - 1, this.state);
-      } else if (e.key === "Enter" || e.key === " ") {
+      else if (e.key === "Enter" || e.key === " ")
         this.selectCurrent();
-      }
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // TRANSITIONS
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── TRANSITIONS ───────────────────────────────────────────────────────────
   private showMenu(state: MenuState, animated: boolean) {
     const c = this.menus.get(state)!;
     c.visible = true;
     this.cursorIndex = 0;
     this.moveCursor(0, state);
 
-    if (!animated) {
-      c.alpha = 1;
-    } else {
-      this.startTween(c, "in", 20);
-    }
+    if (!animated) c.alpha = 1;
+    else this.startTween(c, "in", 20);
 
     this.state = state;
   }
 
   private hideMenu(state: MenuState, then?: () => void) {
     const c = this.menus.get(state)!;
-    this.startTween(c, "out", 14, () => {
-      c.visible = false;
-      then?.();
-    });
+    this.startTween(c, "out", 14, () => { c.visible = false; then?.(); });
   }
 
   private transitionTo(next: MenuState) {
@@ -430,28 +303,17 @@ export class UISystem {
     duration: number,
     onComplete?: () => void,
   ) {
-    this.tween = {
-      active: true,
-      dir,
-      container,
-      duration,
-      elapsed: 0,
-      onComplete,
-    };
+    this.tween = { active: true, dir, container, duration, elapsed: 0, onComplete };
   }
 
   private fadeOutAll() {
     this.menus.forEach((c) => this.startTween(c, "out", 30));
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // UPDATE (every ticker tick)
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── UPDATE ────────────────────────────────────────────────────────────────
   update() {
-    // Loading screen drives itself
     this.loadingScreen?.update();
 
-    // Cursor blink (every 30 frames ≈ 0.5s)
     if (!this.loadingScreen) {
       this.blinkTimer++;
       if (this.blinkTimer % 30 === 0) {
@@ -461,7 +323,6 @@ export class UISystem {
       }
     }
 
-    // Menu fade tween
     if (!this.tween?.active) return;
     const t = this.tween;
     t.elapsed++;

@@ -1,19 +1,8 @@
-/**
- * PixiApp — Main orchestrator (async-aware)
- *
- * Flow:
- *   1. Create PIXI.Application
- *   2. Show a loading text
- *   3. Await BackgroundSystem.init() (fetches PNG assets)
- *   4. Build HorseSystem + UISystem (still procedural)
- *   5. Remove loading text, start ticker
- */
 import * as PIXI from "pixi.js";
 import { BackgroundSystem } from "./systems/BackgroundSystem";
 import { ShepherdSystem } from "./systems/ShepherdSystem";
 import { UISystem } from "./systems/UISystem";
 
-// Global pixel-perfect settings
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 PIXI.settings.ROUND_PIXELS = true;
 
@@ -21,18 +10,16 @@ const BASE_SCROLL_SPEED = 1.2;
 
 export class PixiApp {
   private app: PIXI.Application;
-
   private backgroundContainer: PIXI.Container;
   private horseContainer: PIXI.Container;
   private uiContainer: PIXI.Container;
-
   private backgroundSystem!: BackgroundSystem;
   private shepherdSystem!: ShepherdSystem;
   private uiSystem!: UISystem;
-
   private destroyed = false;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  // FIX TS1294 + TS6138: không dùng parameter property shorthand
+  constructor(canvas: HTMLCanvasElement) {
     const W = Math.max(320, canvas.width || window.innerWidth || 1280);
     const H = Math.max(180, canvas.height || window.innerHeight || 720);
 
@@ -40,16 +27,15 @@ export class PixiApp {
       view: canvas,
       width: W,
       height: H,
-      backgroundColor: 0x5cc8d8, // sky-blue fallback while loading
+      backgroundColor: 0x5cc8d8,
       antialias: false,
       autoDensity: true,
       resolution: window.devicePixelRatio || 1,
     });
 
-    // Containers (added in z-order)
     this.backgroundContainer = new PIXI.Container();
-    this.horseContainer = new PIXI.Container();
-    this.uiContainer = new PIXI.Container();
+    this.horseContainer      = new PIXI.Container();
+    this.uiContainer         = new PIXI.Container();
 
     this.app.stage.addChild(
       this.backgroundContainer,
@@ -57,7 +43,6 @@ export class PixiApp {
       this.uiContainer,
     );
 
-    // Kick off async init
     this.asyncInit(W, H).catch((err) =>
       console.error("[PixiApp] init error:", err),
     );
@@ -65,50 +50,32 @@ export class PixiApp {
     window.addEventListener("resize", this.onResize.bind(this));
   }
 
-  // ── Async init ─────────────────────────────────────────────────────────
   private async asyncInit(W: number, H: number) {
-    // Show a "Loading…" indicator while fetching PNGs
     const loadingText = this.makeLoadingText(W, H);
     this.app.stage.addChild(loadingText);
 
-    // ── Background (async PNG load) ──
-    this.backgroundSystem = new BackgroundSystem(
-      this.backgroundContainer,
-      W,
-      H,
-    );
+    this.backgroundSystem = new BackgroundSystem(this.backgroundContainer, W, H);
     await this.backgroundSystem.init();
 
     if (this.destroyed) return;
 
-    // ── Shepherd system (6 frame PNGs) ──
     const groundY = this.computeGroundY(H);
-    this.shepherdSystem = new ShepherdSystem(
-      this.app,
-      this.horseContainer,
-      groundY,
-    );
+    this.shepherdSystem = new ShepherdSystem(this.app, this.horseContainer, groundY);
 
-    // ── UI system ──
-    this.uiSystem = new UISystem(this.app, this.uiContainer, W, H);
+    // UISystem không cần app — chỉ cần container + W + H
+    this.uiSystem = new UISystem(this.uiContainer, W, H);
 
-    // Remove loading overlay
     this.app.stage.removeChild(loadingText);
-
-    // ── Start game loop ──
     this.app.ticker.add(this.gameLoop.bind(this));
-
     console.log("[PixiApp] Ready ✓");
   }
 
-  // ── Game loop ───────────────────────────────────────────────────────────
   private gameLoop(): void {
     this.backgroundSystem?.update(BASE_SCROLL_SPEED);
     this.shepherdSystem?.update();
     this.uiSystem?.update();
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
   private computeGroundY(H: number): number {
     return Math.floor(H * 0.85);
   }
@@ -128,7 +95,6 @@ export class PixiApp {
     return t;
   }
 
-  // ── Resize ──────────────────────────────────────────────────────────────
   private onResize(): void {
     const W = Math.max(1, window.innerWidth);
     const H = Math.max(1, window.innerHeight);
@@ -141,10 +107,6 @@ export class PixiApp {
     this.destroyed = true;
     window.removeEventListener("resize", this.onResize.bind(this));
     this.app.ticker.stop();
-    this.app.destroy(false, {
-      children: true,
-      texture: true,
-      baseTexture: true,
-    });
+    this.app.destroy(false, { children: true, texture: true, baseTexture: true });
   }
 }
