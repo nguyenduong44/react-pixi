@@ -3,9 +3,6 @@ import { BackgroundSystem } from "./systems/BackgroundSystem";
 import { ShepherdSystem } from "./systems/ShepherdSystem";
 import { UISystem } from "./systems/UISystem";
 
-PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-PIXI.settings.ROUND_PIXELS = true;
-
 const BASE_SCROLL_SPEED = 1.2;
 
 export class PixiApp {
@@ -18,19 +15,26 @@ export class PixiApp {
   private uiSystem!: UISystem;
   private destroyed = false;
 
-  // FIX TS1294 + TS6138: không dùng parameter property shorthand
   constructor(canvas: HTMLCanvasElement) {
-    const W = Math.max(320, canvas.width || window.innerWidth || 1280);
-    const H = Math.max(180, canvas.height || window.innerHeight || 720);
+    // Luôn dùng window.innerWidth/H — đảm bảo đúng kích thước trên production
+    const W = window.innerWidth  || 1280;
+    const H = window.innerHeight || 720;
+
+    // FIX: PIXI.settings phải nằm SAU khi import được resolve,
+    // đặt trong constructor tránh lỗi module-level trên bản minified
+    PIXI.settings.SCALE_MODE   = PIXI.SCALE_MODES.NEAREST;
+    PIXI.settings.ROUND_PIXELS = true;
 
     this.app = new PIXI.Application({
-      view: canvas,
-      width: W,
-      height: H,
+      view:            canvas,
+      width:           W,
+      height:          H,
       backgroundColor: 0x5cc8d8,
-      antialias: false,
-      autoDensity: true,
-      resolution: window.devicePixelRatio || 1,
+      antialias:       false,
+      // FIX: bỏ autoDensity + resolution để tránh xung đột với CSS 100vw/100vh
+      // trên production, devicePixelRatio scaling gây canvas bị offset/black
+      resolution:      1,
+      autoDensity:     false,
     });
 
     this.backgroundContainer = new PIXI.Container();
@@ -43,14 +47,12 @@ export class PixiApp {
       this.uiContainer,
     );
 
-    this.asyncInit(W, H).catch((err) =>
-      console.error("[PixiApp] init error:", err),
-    );
-
+    this.asyncInit(W, H);
     window.addEventListener("resize", this.onResize.bind(this));
   }
 
   private async asyncInit(W: number, H: number) {
+    // FIX: không dùng .catch() — để lỗi nổi lên console rõ ràng trên production
     const loadingText = this.makeLoadingText(W, H);
     this.app.stage.addChild(loadingText);
 
@@ -61,13 +63,10 @@ export class PixiApp {
 
     const groundY = this.computeGroundY(H);
     this.shepherdSystem = new ShepherdSystem(this.app, this.horseContainer, groundY);
-
-    // UISystem không cần app — chỉ cần container + W + H
-    this.uiSystem = new UISystem(this.uiContainer, W, H);
+    this.uiSystem       = new UISystem(this.uiContainer, W, H);
 
     this.app.stage.removeChild(loadingText);
     this.app.ticker.add(this.gameLoop.bind(this));
-    console.log("[PixiApp] Ready ✓");
   }
 
   private gameLoop(): void {
@@ -83,11 +82,9 @@ export class PixiApp {
   private makeLoadingText(W: number, H: number): PIXI.Text {
     const t = new PIXI.Text("Loading…", {
       fontFamily: '"Courier New", monospace',
-      fontSize: 22,
-      fill: 0xffffff,
-      align: "center",
-      dropShadow: true,
-      dropShadowDistance: 2,
+      fontSize:   22,
+      fill:       0xffffff,
+      align:      "center",
     });
     t.anchor.set(0.5);
     t.x = W / 2;
@@ -96,8 +93,8 @@ export class PixiApp {
   }
 
   private onResize(): void {
-    const W = Math.max(1, window.innerWidth);
-    const H = Math.max(1, window.innerHeight);
+    const W = window.innerWidth;
+    const H = window.innerHeight;
     this.app.renderer.resize(W, H);
     this.backgroundSystem?.resize(W, H);
     this.shepherdSystem?.resize(W, this.computeGroundY(H));
