@@ -9,5 +9,4 @@ export default defineConfig({
       usePolling: true,
     },
   },
-  base: process.env.VITE_BASE_PATH || "/react-pixi",
 });
