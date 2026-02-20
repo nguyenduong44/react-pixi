@@ -10,7 +10,7 @@
  */
 import * as PIXI from "pixi.js";
 import { BackgroundSystem } from "./systems/BackgroundSystem";
-import { DodoSystem } from "./systems/DodoSystem";
+import { ShepherdSystem } from "./systems/ShepherdSystem";
 import { UISystem } from "./systems/UISystem";
 
 // Global pixel-perfect settings
@@ -27,7 +27,7 @@ export class PixiApp {
   private uiContainer: PIXI.Container;
 
   private backgroundSystem!: BackgroundSystem;
-  private dodoSystem!: DodoSystem;
+  private shepherdSystem!: ShepherdSystem;
   private uiSystem!: UISystem;
 
   private destroyed = false;
@@ -81,9 +81,13 @@ export class PixiApp {
 
     if (this.destroyed) return;
 
-    // ── Dodo system (sprite sheet from dodo.png) ──
+    // ── Shepherd system (6 frame PNGs) ──
     const groundY = this.computeGroundY(H);
-    this.dodoSystem = new DodoSystem(this.app, this.horseContainer, groundY);
+    this.shepherdSystem = new ShepherdSystem(
+      this.app,
+      this.horseContainer,
+      groundY,
+    );
 
     // ── UI system ──
     this.uiSystem = new UISystem(this.app, this.uiContainer, W, H);
@@ -100,6 +104,7 @@ export class PixiApp {
   // ── Game loop ───────────────────────────────────────────────────────────
   private gameLoop(): void {
     this.backgroundSystem?.update(BASE_SCROLL_SPEED);
+    this.shepherdSystem?.update();
     this.uiSystem?.update();
   }
 
@@ -129,7 +134,7 @@ export class PixiApp {
     const H = Math.max(1, window.innerHeight);
     this.app.renderer.resize(W, H);
     this.backgroundSystem?.resize(W, H);
-    this.dodoSystem?.resize(W, this.computeGroundY(H));
+    this.shepherdSystem?.resize(W, this.computeGroundY(H));
   }
 
   destroy(): void {

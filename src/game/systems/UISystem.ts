@@ -170,7 +170,7 @@ export class UISystem {
         },
       },
       {
-        label: "< QUAY LẠI",
+        label: "< quay lại",
         onClick: () => {
           soundManager.playMenuBack();
           this.transitionTo("main");
